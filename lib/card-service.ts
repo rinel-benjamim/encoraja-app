@@ -1,92 +1,82 @@
-import { db } from "./firebase"
-import {
-  collection,
-  addDoc,
-  getDoc,
-  getDocs,
-  doc,
-  query,
-  where,
-  orderBy,
-  updateDoc,
-  increment,
-  serverTimestamp,
-  Timestamp,
-} from "firebase/firestore"
+"use server"
+
+import { prisma } from "@/lib/db"
+import { revalidatePath } from "next/cache"
 import type { Card } from "@/types/card"
 
-const CARDS_COLLECTION = "cards"
-
-export async function createCard(cardData: Omit<Card, "id" | "createdAt" | "views">): Promise<string> {
+export async function createCard(cardData: Omit<Card, "id" | "createdAt" | "views" | "updatedAt">) {
   try {
-    const docRef = await addDoc(collection(db, CARDS_COLLECTION), {
-      ...cardData,
-      createdAt: serverTimestamp(),
-      views: 0,
+    const card = await prisma.card.create({
+      data: {
+        userId: cardData.userId,
+        author: cardData.author,
+        message: cardData.message,
+        backgroundUrl: cardData.backgroundUrl,
+        backgroundColor: cardData.backgroundColor,
+        fontFamily: cardData.fontFamily,
+        textColor: cardData.textColor,
+        // @ts-ignore
+        fontSize: cardData.fontSize || 24,
+        // @ts-ignore
+        textAlign: cardData.textAlign || "center",
+        isPublic: cardData.isPublic,
+      },
     })
-    return docRef.id
+    
+    revalidatePath("/dashboard")
+    return card.id
   } catch (error) {
     console.error("Erro ao criar cartão:", error)
-    throw error
+    throw new Error("Falha ao criar cartão")
   }
 }
 
-export async function getCard(id: string): Promise<Card | null> {
+export async function getCard(id: string) {
   try {
-    const docRef = doc(db, CARDS_COLLECTION, id)
-    const docSnap = await getDoc(docRef)
+    const card = await prisma.card.findUnique({
+      where: { id },
+    })
+    
+    if (!card) return null
 
-    if (docSnap.exists()) {
-      const data = docSnap.data()
-      // Converter Timestamp para number (millis) se necessário
-      const createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toMillis() : Date.now()
-      
-      return {
-        id: docSnap.id,
-        ...data,
-        createdAt,
-      } as Card
-    } else {
-      return null
+    return {
+      ...card,
+      createdAt: card.createdAt.getTime(), // Convert Date to number for client compatibility
     }
   } catch (error) {
     console.error("Erro ao buscar cartão:", error)
-    throw error
+    return null
   }
 }
 
-export async function getUserCards(userId: string): Promise<Card[]> {
+export async function getUserCards(userId: string) {
   try {
-    const q = query(
-      collection(db, CARDS_COLLECTION),
-      where("userId", "==", userId),
-      orderBy("createdAt", "desc")
-    )
-    
-    const querySnapshot = await getDocs(q)
-    return querySnapshot.docs.map((doc) => {
-      const data = doc.data()
-      const createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toMillis() : Date.now()
-      return {
-        id: doc.id,
-        ...data,
-        createdAt,
-      } as Card
+    const cards = await prisma.card.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
     })
+    
+    return cards.map(card => ({
+      ...card,
+      createdAt: card.createdAt.getTime(),
+    }))
   } catch (error) {
     console.error("Erro ao buscar cartões do usuário:", error)
-    throw error
+    return []
   }
 }
 
-export async function incrementCardViews(id: string): Promise<void> {
+export async function incrementCardViews(id: string) {
   try {
-    const docRef = doc(db, CARDS_COLLECTION, id)
-    await updateDoc(docRef, {
-      views: increment(1),
+    await prisma.card.update({
+      where: { id },
+      data: {
+        views: {
+          increment: 1,
+        },
+      },
     })
   } catch (error) {
     console.error("Erro ao incrementar visualizações:", error)
-    // Não lançar erro para não bloquear a UI se falhar
   }
 }

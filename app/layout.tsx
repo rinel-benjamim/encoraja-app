@@ -2,7 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Playfair_Display, Open_Sans } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
-import { AuthProvider } from "@/lib/auth-context"
+import { Providers } from "@/components/providers"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
@@ -49,10 +49,10 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`${playfairDisplay.variable} ${openSans.variable} font-sans antialiased`}>
-        <AuthProvider>
+        <Providers>
           {children}
           <Toaster />
-        </AuthProvider>
+        </Providers>
         <Analytics />
       </body>
     </html>

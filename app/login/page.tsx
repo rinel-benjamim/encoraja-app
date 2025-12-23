@@ -6,9 +6,10 @@ import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-context"
+import { signIn } from "next-auth/react"
+import { registerUser } from "@/lib/auth-actions"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardHeader } from "@/components/ui/card"
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -18,10 +19,8 @@ import { AlertCircle, Heart } from "lucide-react"
 
 export default function LoginPage() {
   const router = useRouter()
-  const { signIn, signUp, resetPassword } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const [resetEmailSent, setResetEmailSent] = useState(false)
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("")
@@ -32,40 +31,27 @@ export default function LoginPage() {
   const [signupPassword, setSignupPassword] = useState("")
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("")
 
-  // Reset password state
-  const [resetEmail, setResetEmail] = useState("")
-
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setIsLoading(true)
 
     try {
-      await signIn(loginEmail, loginPassword)
-      router.push("/dashboard")
-    } catch (err: unknown) {
-      console.error("[v0] Login error:", err)
-      let errorMessage = "Erro ao fazer login. Verifique suas credenciais."
+      const result = await signIn("credentials", {
+        email: loginEmail,
+        password: loginPassword,
+        redirect: false,
+      })
 
-      if (err instanceof Error) {
-        // Check for specific Firebase errors
-        if (err.message.includes("configuration-not-found")) {
-          errorMessage =
-            "Erro de configuração do Firebase. Verifique se as variáveis de ambiente estão configuradas corretamente na seção 'Vars' da barra lateral."
-        } else if (err.message.includes("invalid-credential") || err.message.includes("wrong-password")) {
-          errorMessage = "Email ou senha incorretos. Tente novamente."
-        } else if (err.message.includes("user-not-found")) {
-          errorMessage = "Usuário não encontrado. Crie uma conta primeiro."
-        } else if (err.message.includes("too-many-requests")) {
-          errorMessage = "Muitas tentativas de login. Tente novamente mais tarde."
-        } else if (err.message.includes("network-request-failed")) {
-          errorMessage = "Erro de conexão. Verifique sua internet."
-        } else {
-          errorMessage = err.message
-        }
+      if (result?.error) {
+        setError("Email ou senha incorretos.")
+      } else {
+        router.push("/dashboard")
+        router.refresh()
       }
-
-      setError(errorMessage)
+    } catch (err) {
+      console.error("Login error:", err)
+      setError("Ocorreu um erro ao fazer login.")
     } finally {
       setIsLoading(false)
     }
@@ -88,67 +74,28 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      await signUp(signupEmail, signupPassword)
-      router.push("/dashboard")
-    } catch (err: unknown) {
-      console.error("[v0] Signup error:", err)
-      let errorMessage = "Erro ao criar conta. Tente novamente."
+      const formData = new FormData()
+      formData.append("email", signupEmail)
+      formData.append("password", signupPassword)
+      
+      await registerUser(formData)
+      
+      // Auto login after signup
+      const result = await signIn("credentials", {
+        email: signupEmail,
+        password: signupPassword,
+        redirect: false,
+      })
 
-      if (err instanceof Error) {
-        // Check for specific Firebase errors
-        if (err.message.includes("configuration-not-found")) {
-          errorMessage =
-            "Erro de configuração do Firebase. Verifique se as variáveis de ambiente estão configuradas corretamente na seção 'Vars' da barra lateral."
-        } else if (err.message.includes("email-already-in-use")) {
-          errorMessage = "Este email já está em uso. Faça login ou use outro email."
-        } else if (err.message.includes("invalid-email")) {
-          errorMessage = "Email inválido. Verifique o formato."
-        } else if (err.message.includes("weak-password")) {
-          errorMessage = "Senha muito fraca. Use pelo menos 6 caracteres."
-        } else if (err.message.includes("network-request-failed")) {
-          errorMessage = "Erro de conexão. Verifique sua internet."
-        } else {
-          errorMessage = err.message
-        }
+      if (result?.error) {
+        setError("Conta criada, mas erro ao fazer login automático.")
+      } else {
+        router.push("/dashboard")
+        router.refresh()
       }
-
-      setError(errorMessage)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setResetEmailSent(false)
-    setIsLoading(true)
-
-    try {
-      await resetPassword(resetEmail)
-      setResetEmailSent(true)
-      setResetEmail("")
-    } catch (err: unknown) {
-      console.error("[v0] Reset password error:", err)
-      let errorMessage = "Erro ao enviar email de recuperação."
-
-      if (err instanceof Error) {
-        // Check for specific Firebase errors
-        if (err.message.includes("configuration-not-found")) {
-          errorMessage =
-            "Erro de configuração do Firebase. Verifique se as variáveis de ambiente estão configuradas corretamente na seção 'Vars' da barra lateral."
-        } else if (err.message.includes("user-not-found")) {
-          errorMessage = "Email não encontrado. Verifique o endereço."
-        } else if (err.message.includes("invalid-email")) {
-          errorMessage = "Email inválido. Verifique o formato."
-        } else if (err.message.includes("network-request-failed")) {
-          errorMessage = "Erro de conexão. Verifique sua internet."
-        } else {
-          errorMessage = err.message
-        }
-      }
-
-      setError(errorMessage)
+    } catch (err: any) {
+      console.error("Signup error:", err)
+      setError(err.message || "Erro ao criar conta.")
     } finally {
       setIsLoading(false)
     }
@@ -215,11 +162,6 @@ export default function LoginPage() {
                         required
                         disabled={isLoading}
                       />
-                      <FieldDescription>
-                        <Link href="#reset" className="text-primary hover:underline text-sm">
-                          Esqueceu sua senha?
-                        </Link>
-                      </FieldDescription>
                     </Field>
                   </FieldGroup>
 
@@ -307,50 +249,6 @@ export default function LoginPage() {
               </TabsContent>
             </Tabs>
           </CardHeader>
-        </Card>
-
-        <Card className="border-2 border-border/50" id="reset">
-          <CardHeader>
-            <CardTitle className="text-lg">Recuperar Senha</CardTitle>
-            <CardDescription>Digite seu email para receber instruções de recuperação</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {resetEmailSent && (
-              <Alert className="mb-4">
-                <AlertDescription>Email de recuperação enviado! Verifique sua caixa de entrada.</AlertDescription>
-              </Alert>
-            )}
-            {error && !resetEmailSent && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            <form onSubmit={handleResetPassword} className="space-y-4">
-              <Field>
-                <FieldLabel htmlFor="reset-email">Email</FieldLabel>
-                <Input
-                  id="reset-email"
-                  type="email"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  placeholder="seu@email.com"
-                  required
-                  disabled={isLoading}
-                />
-              </Field>
-              <Button type="submit" variant="outline" className="w-full bg-transparent" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Spinner className="mr-2 h-4 w-4" />
-                    Enviando...
-                  </>
-                ) : (
-                  "Enviar Email de Recuperação"
-                )}
-              </Button>
-            </form>
-          </CardContent>
         </Card>
 
         <div className="text-center">

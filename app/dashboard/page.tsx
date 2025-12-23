@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { useAuth } from "@/lib/auth-context"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { getUserCards } from "@/lib/card-service"
-import { AuthGuard } from "@/components/auth-guard"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Eye, Calendar, ExternalLink } from "lucide-react"
@@ -13,15 +13,24 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
 export default function DashboardPage() {
-  const { user } = useAuth()
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const [cards, setCards] = useState<CardType[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login")
+    }
+  }, [status, router])
+
+  useEffect(() => {
     async function fetchCards() {
-      if (user) {
+      if (session?.user) {
         try {
-          const userCards = await getUserCards(user.uid)
+          // @ts-ignore
+          const userCards = await getUserCards(session.user.id)
+          // @ts-ignore
           setCards(userCards)
         } catch (error) {
           console.error("Erro ao carregar cartões:", error)
@@ -31,32 +40,39 @@ export default function DashboardPage() {
       }
     }
 
-    fetchCards()
-  }, [user])
+    if (status === "authenticated") {
+      fetchCards()
+    }
+  }, [session, status])
+
+  if (status === "loading") {
+    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>
+  }
+
+  if (!session) return null
 
   return (
-    <AuthGuard>
-      <div className="min-h-screen bg-background">
-        <header className="border-b border-border/40 bg-background/80 backdrop-blur-sm sticky top-0 z-50">
-          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-            <Link href="/" className="font-serif text-xl font-bold text-primary">
-              Encoraja
+    <div className="min-h-screen bg-background">
+      <header className="border-b border-border/40 bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <Link href="/" className="font-serif text-xl font-bold text-primary">
+            Encoraja
+          </Link>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground hidden md:inline-block">
+              Olá, {session.user?.name || session.user?.email?.split("@")[0]}
+            </span>
+            <Link href="/criar">
+              <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Cartão
+              </Button>
             </Link>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground hidden md:inline-block">
-                Olá, {user?.email?.split("@")[0]}
-              </span>
-              <Link href="/criar">
-                <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Novo Cartão
-                </Button>
-              </Link>
-            </div>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-between mb-8">
             <h1 className="font-serif text-3xl text-foreground">Meus Cartões</h1>
           </div>
@@ -130,6 +146,5 @@ export default function DashboardPage() {
           )}
         </main>
       </div>
-    </AuthGuard>
   )
 }

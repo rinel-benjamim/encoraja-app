@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { useAuth } from "@/lib/auth-context"
+import { useSession } from "next-auth/react"
 import { createCard } from "@/lib/card-service"
 import { uploadImage } from "@/lib/storage-service"
 import { Button } from "@/components/ui/button"
@@ -50,7 +50,7 @@ const SUGGESTED_MESSAGES = [
 
 export default function CreateCardPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { data: session, status } = useSession()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -59,7 +59,7 @@ export default function CreateCardPage() {
   
   // Card State
   const [message, setMessage] = useState("Sua mensagem aqui...")
-  const [author, setAuthor] = useState(user?.displayName || user?.email?.split("@")[0] || "Anônimo")
+  const [author, setAuthor] = useState("")
   const [backgroundUrl, setBackgroundUrl] = useState<string | undefined>(BACKGROUND_IMAGES[0])
   const [backgroundColor, setBackgroundColor] = useState("#ffffff")
   const [fontFamily, setFontFamily] = useState("font-serif")
@@ -67,13 +67,22 @@ export default function CreateCardPage() {
   const [fontSize, setFontSize] = useState(24)
   const [textAlign, setTextAlign] = useState<"left" | "center" | "right">("center")
 
+  useEffect(() => {
+    if (session?.user) {
+      setAuthor(session.user.name || session.user.email?.split("@")[0] || "Anônimo")
+    }
+  }, [session])
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
     setUploading(true)
     try {
-      const url = await uploadImage(file)
+      const formData = new FormData()
+      formData.append("file", file)
+      
+      const url = await uploadImage(formData)
       setBackgroundUrl(url)
       toast({
         title: "Imagem enviada!",
@@ -102,8 +111,11 @@ export default function CreateCardPage() {
 
     setLoading(true)
     try {
+      // @ts-ignore
+      const userId = session?.user?.id
+
       const cardId = await createCard({
-        userId: user?.uid,
+        userId: userId,
         author,
         message,
         backgroundUrl,

@@ -2,12 +2,14 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { useAuth } from "@/lib/auth-context"
+import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { User } from "lucide-react"
 
 export function SiteHeader() {
-  const { user, loading } = useAuth()
+  const { data: session, status } = useSession()
+  const loading = status === "loading"
+  const user = session?.user
 
   return (
     <header className="border-b border-border/40 bg-background/80 backdrop-blur-sm sticky top-0 z-50">

@@ -21,8 +21,10 @@ export default function ViewCardPage() {
     async function fetchCard() {
       if (params.id) {
         try {
+          // @ts-ignore
           const cardData = await getCard(params.id as string)
           if (cardData) {
+            // @ts-ignore
             setCard(cardData)
             // Incrementar views apenas uma vez
             incrementCardViews(params.id as string)
