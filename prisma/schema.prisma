@@ -11,20 +11,22 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String?
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  cards     Card[]
+  id          String   @id @default(cuid())
+  name        String?
+  username    String?  @unique
+  email       String   @unique
+  phoneNumber String?  @unique
+  password    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  cards       Card[]
 }
 
 model Card {
   id              String   @id @default(cuid())
   userId          String?
   author          String
-  message         String
+  message         String?  // Optional now, as we might use slides
   backgroundUrl   String?
   backgroundColor String?
   fontFamily      String
@@ -33,8 +35,37 @@ model Card {
   textAlign       String   @default("center")
   views           Int      @default(0)
   isPublic        Boolean  @default(true)
+  
+  // New Features
+  audioUrl        String?
+  videoUrl        String?
+  revealAt        DateTime?
+  themeId         String?
+  
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
   user            User?    @relation(fields: [userId], references: [id])
+  slides          CardSlide[]
+  reactions       Reaction[]
+}
+
+model CardSlide {
+  id        String   @id @default(cuid())
+  cardId    String
+  content   String
+  mediaUrl  String?
+  mediaType String? // "image" | "video"
+  order     Int
+  
+  card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  cardId    String
+  type      String   // "LIKE", "LOVE", "HUG", "LAUGH", "INSPIRE"
+  createdAt DateTime @default(now())
+  
+  card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
 }

@@ -25,7 +25,14 @@ import {
   Save, 
   ArrowLeft, 
   Upload,
-  Check
+  Check,
+  Plus,
+  Trash2,
+  Music,
+  Video,
+  Calendar,
+  Sparkles,
+  QrCode
 } from "lucide-react"
 import { FONT_OPTIONS, COLOR_OPTIONS } from "@/types/card"
 
@@ -48,17 +55,22 @@ const SUGGESTED_MESSAGES = [
   "Você é capaz de coisas incríveis.",
 ]
 
+const AI_CATEGORIES = ["Motivação", "Aniversário", "Amor", "Gratidão", "Superação"]
+
 export default function CreateCardPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
+  const audioInputRef = useRef<HTMLInputElement>(null)
 
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   
   // Card State
-  const [message, setMessage] = useState("Sua mensagem aqui...")
+  const [slides, setSlides] = useState([{ content: "Sua mensagem aqui...", mediaUrl: "", mediaType: "image" }])
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
   const [author, setAuthor] = useState("")
   const [backgroundUrl, setBackgroundUrl] = useState<string | undefined>(BACKGROUND_IMAGES[0])
   const [backgroundColor, setBackgroundColor] = useState("#ffffff")
@@ -66,6 +78,12 @@ export default function CreateCardPage() {
   const [textColor, setTextColor] = useState("#ffffff")
   const [fontSize, setFontSize] = useState(24)
   const [textAlign, setTextAlign] = useState<"left" | "center" | "right">("center")
+  
+  // New Features State
+  const [audioUrl, setAudioUrl] = useState<string | undefined>()
+  const [videoUrl, setVideoUrl] = useState<string | undefined>()
+  const [revealAt, setRevealAt] = useState<string>("")
+  const [showQRCode, setShowQRCode] = useState(false)
 
   useEffect(() => {
     if (session?.user) {
@@ -99,8 +117,66 @@ export default function CreateCardPage() {
     }
   }
 
+  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'audio' | 'video') => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      
+      const url = await uploadImage(formData)
+      if (type === 'audio') setAudioUrl(url)
+      else setVideoUrl(url)
+      
+      toast({
+        title: "Mídia enviada!",
+        description: `Seu ${type === 'audio' ? 'áudio' : 'vídeo'} foi carregado com sucesso.`,
+      })
+    } catch (error) {
+      toast({
+        title: "Erro no upload",
+        description: "Não foi possível enviar o arquivo. Tente novamente.",
+        variant: "destructive",
+      })
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const addSlide = () => {
+    setSlides([...slides, { content: "Nova mensagem...", mediaUrl: "", mediaType: "image" }])
+    setCurrentSlideIndex(slides.length)
+  }
+
+  const removeSlide = (index: number) => {
+    if (slides.length === 1) return
+    const newSlides = slides.filter((_, i) => i !== index)
+    setSlides(newSlides)
+    setCurrentSlideIndex(Math.min(currentSlideIndex, newSlides.length - 1))
+  }
+
+  const updateSlideContent = (content: string) => {
+    const newSlides = [...slides]
+    newSlides[currentSlideIndex].content = content
+    setSlides(newSlides)
+  }
+
+  const generateAIMessage = (category: string) => {
+    // Mock AI generation
+    const messages = [
+      `Para ${category}: Acredite que cada dia traz uma nova oportunidade de vencer.`,
+      `Em momentos de ${category}, lembre-se da sua força interior.`,
+      `Que a ${category} encha seu coração de paz e alegria.`,
+      `Você é um exemplo de ${category} para todos nós.`
+    ]
+    const randomMsg = messages[Math.floor(Math.random() * messages.length)]
+    updateSlideContent(randomMsg)
+  }
+
   const handleSave = async () => {
-    if (!message.trim()) {
+    if (!slides[0].content.trim()) {
       toast({
         title: "Mensagem vazia",
         description: "Por favor, escreva uma mensagem para o cartão.",
@@ -117,15 +193,18 @@ export default function CreateCardPage() {
       const cardId = await createCard({
         userId: userId,
         author,
-        message,
+        message: slides[0].content, // Fallback
+        slides,
         backgroundUrl,
         backgroundColor,
         fontFamily,
         textColor,
         isPublic: true,
-        // @ts-ignore - Adicionando campos extras de estilo que não estavam na interface original mas são úteis
         fontSize,
         textAlign,
+        audioUrl,
+        videoUrl,
+        revealAt: revealAt || null,
       })
 
       toast({
@@ -168,7 +247,7 @@ export default function CreateCardPage() {
 
       <main className="flex-1 container mx-auto px-4 py-8 grid lg:grid-cols-[1fr_400px] gap-8">
         {/* Preview Area */}
-        <div className="flex items-center justify-center bg-secondary/10 rounded-3xl p-8 min-h-[500px]">
+        <div className="flex flex-col items-center justify-center bg-secondary/10 rounded-3xl p-8 min-h-[500px]">
           <div 
             className="relative w-full max-w-md aspect-[4/5] shadow-2xl rounded-xl overflow-hidden transition-all duration-300"
             style={{
@@ -182,6 +261,12 @@ export default function CreateCardPage() {
             {backgroundUrl && <div className="absolute inset-0 bg-black/20" />}
             
             <div className="absolute inset-0 p-8 flex flex-col justify-center items-center h-full z-10">
+              {videoUrl && (
+                <div className="w-full mb-4 aspect-video bg-black rounded-lg overflow-hidden">
+                  <video src={videoUrl} controls className="w-full h-full object-cover" />
+                </div>
+              )}
+              
               <p 
                 className={`${fontFamily} leading-relaxed break-words w-full`}
                 style={{ 
@@ -191,7 +276,7 @@ export default function CreateCardPage() {
                   textShadow: backgroundUrl ? '0 2px 4px rgba(0,0,0,0.5)' : 'none'
                 }}
               >
-                {message}
+                {slides[currentSlideIndex].content}
               </p>
               <p 
                 className="mt-6 text-sm font-medium opacity-80"
@@ -206,29 +291,64 @@ export default function CreateCardPage() {
               <span className="text-[10px] font-serif text-white drop-shadow-md">Encoraja.app</span>
             </div>
           </div>
+
+          {/* Slide Navigation */}
+          <div className="flex items-center gap-2 mt-6">
+            {slides.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentSlideIndex(idx)}
+                className={`w-3 h-3 rounded-full transition-all ${idx === currentSlideIndex ? 'bg-primary scale-125' : 'bg-muted-foreground/30'}`}
+              />
+            ))}
+            <Button variant="outline" size="icon" className="rounded-full w-8 h-8 ml-2" onClick={addSlide}>
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Controls Area */}
         <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-100px)] pr-2">
           <Tabs defaultValue="message" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-4">
+            <TabsList className="grid w-full grid-cols-5 mb-4">
               <TabsTrigger value="message"><Type className="w-4 h-4" /></TabsTrigger>
               <TabsTrigger value="background"><ImageIcon className="w-4 h-4" /></TabsTrigger>
               <TabsTrigger value="style"><Palette className="w-4 h-4" /></TabsTrigger>
-              <TabsTrigger value="layout"><Layout className="w-4 h-4" /></TabsTrigger>
+              <TabsTrigger value="media"><Music className="w-4 h-4" /></TabsTrigger>
+              <TabsTrigger value="extras"><Sparkles className="w-4 h-4" /></TabsTrigger>
             </TabsList>
 
             <TabsContent value="message" className="space-y-4">
+              <div className="flex justify-between items-center">
+                <Label>Slide {currentSlideIndex + 1}</Label>
+                {slides.length > 1 && (
+                  <Button variant="ghost" size="sm" onClick={() => removeSlide(currentSlideIndex)} className="text-destructive">
+                    <Trash2 className="w-4 h-4 mr-1" /> Remover Slide
+                  </Button>
+                )}
+              </div>
+              
               <div className="space-y-2">
                 <Label>Sua Mensagem</Label>
                 <Textarea 
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
+                  value={slides[currentSlideIndex].content}
+                  onChange={(e) => updateSlideContent(e.target.value)}
                   placeholder="Escreva algo encorajador..."
                   className="min-h-[120px] text-lg"
                   maxLength={300}
                 />
-                <p className="text-xs text-muted-foreground text-right">{message.length}/300</p>
+                <p className="text-xs text-muted-foreground text-right">{slides[currentSlideIndex].content.length}/300</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Gerar com IA (Simulado)</Label>
+                <div className="flex flex-wrap gap-2">
+                  {AI_CATEGORIES.map(cat => (
+                    <Button key={cat} variant="outline" size="sm" onClick={() => generateAIMessage(cat)}>
+                      {cat}
+                    </Button>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -238,23 +358,6 @@ export default function CreateCardPage() {
                   onChange={(e) => setAuthor(e.target.value)}
                   placeholder="Seu nome"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Sugestões</Label>
-                <div className="grid grid-cols-1 gap-2">
-                  {SUGGESTED_MESSAGES.slice(0, 4).map((msg, i) => (
-                    <Button 
-                      key={i} 
-                      variant="outline" 
-                      size="sm" 
-                      className="justify-start h-auto py-2 text-left whitespace-normal"
-                      onClick={() => setMessage(msg)}
-                    >
-                      {msg}
-                    </Button>
-                  ))}
-                </div>
               </div>
             </TabsContent>
 
@@ -374,9 +477,7 @@ export default function CreateCardPage() {
                   />
                 </div>
               </div>
-            </TabsContent>
-
-            <TabsContent value="layout" className="space-y-6">
+              
               <div className="space-y-2">
                 <Label>Tamanho da Fonte: {fontSize}px</Label>
                 <Slider 
@@ -416,6 +517,88 @@ export default function CreateCardPage() {
                     Direita
                   </Button>
                 </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="media" className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Música de Fundo</Label>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="w-full" 
+                      onClick={() => audioInputRef.current?.click()}
+                      disabled={uploading}
+                    >
+                      {uploading ? <Spinner className="mr-2 h-4 w-4" /> : <Music className="mr-2 h-4 w-4" />}
+                      {audioUrl ? "Alterar Música" : "Adicionar Música"}
+                    </Button>
+                    <input 
+                      type="file" 
+                      ref={audioInputRef}
+                      className="hidden" 
+                      accept="audio/*"
+                      onChange={(e) => handleMediaUpload(e, 'audio')}
+                    />
+                  </div>
+                  {audioUrl && <audio src={audioUrl} controls className="w-full mt-2 h-8" />}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Vídeo (Slide Atual)</Label>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="w-full" 
+                      onClick={() => videoInputRef.current?.click()}
+                      disabled={uploading}
+                    >
+                      {uploading ? <Spinner className="mr-2 h-4 w-4" /> : <Video className="mr-2 h-4 w-4" />}
+                      {videoUrl ? "Alterar Vídeo" : "Adicionar Vídeo"}
+                    </Button>
+                    <input 
+                      type="file" 
+                      ref={videoInputRef}
+                      className="hidden" 
+                      accept="video/*"
+                      onChange={(e) => handleMediaUpload(e, 'video')}
+                    />
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="extras" className="space-y-6">
+              <div className="space-y-2">
+                <Label>Agendar Revelação</Label>
+                <div className="flex gap-2 items-center">
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    type="datetime-local" 
+                    value={revealAt}
+                    onChange={(e) => setRevealAt(e.target.value)}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">O cartão só poderá ser visto após esta data.</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>QR Code</Label>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={() => setShowQRCode(!showQRCode)} className="w-full">
+                    <QrCode className="w-4 h-4 mr-2" />
+                    {showQRCode ? "Ocultar QR Code" : "Gerar QR Code"}
+                  </Button>
+                </div>
+                {showQRCode && (
+                  <div className="p-4 bg-white rounded-lg flex justify-center">
+                    {/* Placeholder for QR Code - In a real app use a library like qrcode.react */}
+                    <div className="w-32 h-32 bg-black/10 flex items-center justify-center text-xs text-center">
+                      QR Code gerado após salvar
+                    </div>
+                  </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>

@@ -16,8 +16,14 @@ const handler = NextAuth({
           return null
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+        // Allow login with email or phone number
+        const user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { email: credentials.email },
+              { phoneNumber: credentials.email } // We reuse the 'email' field for phone input
+            ]
+          },
         })
 
         if (!user) {
@@ -34,6 +40,7 @@ const handler = NextAuth({
           id: user.id,
           email: user.email,
           name: user.name,
+          username: user.username,
         }
       },
     }),
