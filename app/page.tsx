@@ -1,3 +1,7 @@
+"use client"
+
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -6,6 +10,19 @@ import { Heart, Sparkles, Send, Users } from "lucide-react"
 import { SiteHeader } from "@/components/site-header"
 
 export default function HomePage() {
+  const router = useRouter()
+
+  useEffect(() => {
+    // Check if running in standalone mode (PWA)
+    const isStandalone = 
+      window.matchMedia('(display-mode: standalone)').matches || 
+      (window.navigator as any).standalone === true
+
+    if (isStandalone) {
+      router.replace('/login')
+    }
+  }, [router])
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-secondary/20 to-background">
       {/* Header */}

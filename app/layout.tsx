@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Playfair_Display, Open_Sans } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { Providers } from "@/components/providers"
@@ -18,10 +18,20 @@ const openSans = Open_Sans({
   display: "swap",
 })
 
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
+}
+
 export const metadata: Metadata = {
   title: "Encoraja - Um abraço que se espalha",
   description: "Crie cartões digitais personalizados com mensagens motivacionais e compartilhe esperança.",
   generator: "v0.app",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Encoraja",
+  },
   icons: {
     icon: [
       {
