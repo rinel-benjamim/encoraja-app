@@ -1,7 +1,9 @@
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { prisma } from "@/lib/db"
+import { getDataService } from "@/lib/data/factory"
 import bcrypt from "bcryptjs"
+
+const dataService = getDataService()
 
 const handler = NextAuth({
   providers: [
@@ -17,14 +19,11 @@ const handler = NextAuth({
         }
 
         // Allow login with email or phone number
-        const user = await prisma.user.findFirst({
-          where: {
-            OR: [
-              { email: credentials.email },
-              { phoneNumber: credentials.email } // We reuse the 'email' field for phone input
-            ]
-          },
-        })
+        // We need to implement findUserByEmailOrPhone in interface or check both
+        let user = await dataService.findUserByEmail(credentials.email)
+        if (!user) {
+          user = await dataService.findUserByPhone(credentials.email)
+        }
 
         if (!user) {
           return null

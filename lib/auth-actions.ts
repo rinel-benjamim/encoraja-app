@@ -1,12 +1,12 @@
 "use server"
 
-import { prisma } from "@/lib/db"
+import { getDataService } from "@/lib/data/factory"
 import bcrypt from "bcryptjs"
 
+const dataService = getDataService()
+
 export async function checkUsername(username: string) {
-  const user = await prisma.user.findUnique({
-    where: { username },
-  })
+  const user = await dataService.findUserByUsername(username)
   return !!user
 }
 
@@ -39,9 +39,7 @@ export async function registerUser(formData: FormData) {
   }
 
   // Check if email exists
-  const existingEmail = await prisma.user.findUnique({
-    where: { email },
-  })
+  const existingEmail = await dataService.findUserByEmail(email)
 
   if (existingEmail) {
     throw new Error("Email já cadastrado")
@@ -49,9 +47,7 @@ export async function registerUser(formData: FormData) {
 
   // Check if username exists
   if (username) {
-    const existingUsername = await prisma.user.findUnique({
-      where: { username },
-    })
+    const existingUsername = await dataService.findUserByUsername(username)
     if (existingUsername) {
       throw new Error("Nome de usuário já está em uso")
     }
@@ -59,9 +55,7 @@ export async function registerUser(formData: FormData) {
 
   // Check if phone exists
   if (phoneNumber) {
-    const existingPhone = await prisma.user.findUnique({
-      where: { phoneNumber },
-    })
+    const existingPhone = await dataService.findUserByPhone(phoneNumber)
     if (existingPhone) {
       throw new Error("Número de telefone já cadastrado")
     }
@@ -69,14 +63,12 @@ export async function registerUser(formData: FormData) {
 
   const hashedPassword = await bcrypt.hash(password, 10)
 
-  await prisma.user.create({
-    data: {
-      email,
-      password: hashedPassword,
-      name: name || email.split("@")[0],
-      username: username || undefined,
-      phoneNumber: phoneNumber || undefined,
-    },
+  await dataService.createUser({
+    email,
+    password: hashedPassword,
+    name: name || email.split("@")[0],
+    username: username || undefined,
+    phoneNumber: phoneNumber || undefined,
   })
 
   return { success: true }
