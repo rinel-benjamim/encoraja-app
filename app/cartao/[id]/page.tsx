@@ -7,7 +7,7 @@ import { getCard, incrementCardViews, addReaction } from "@/lib/card-service"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { useToast } from "@/hooks/use-toast"
-import { Heart, Share2, Copy, MessageCircle, Sparkles, Lock, ThumbsUp, Smile, Music, Video } from "lucide-react"
+import { Heart, Share2, Copy, MessageCircle, Sparkles, Lock, ThumbsUp, Smile, Music, Video, ChevronLeft, ChevronRight } from "lucide-react"
 import type { Card } from "@/types/card"
 
 export default function ViewCardPage() {
@@ -122,6 +122,18 @@ export default function ViewCardPage() {
   const slides = card.slides && card.slides.length > 0 ? card.slides : [{ content: card.message, mediaUrl: null, mediaType: null }]
   const currentSlide = slides[currentSlideIndex]
 
+  const nextSlide = () => {
+    if (currentSlideIndex < slides.length - 1) {
+      setCurrentSlideIndex(currentSlideIndex + 1)
+    }
+  }
+
+  const prevSlide = () => {
+    if (currentSlideIndex > 0) {
+      setCurrentSlideIndex(currentSlideIndex - 1)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-secondary/20 to-background flex flex-col">
       <header className="p-4 flex justify-center">
@@ -141,18 +153,18 @@ export default function ViewCardPage() {
           </div>
         )}
 
-        <div className="w-full max-w-md animate-in fade-in zoom-in duration-500">
+        <div className="w-full max-w-md animate-in fade-in zoom-in duration-500 relative group">
           <div 
             className="relative aspect-[4/5] shadow-2xl rounded-xl overflow-hidden transition-all duration-500"
             style={{
-              backgroundColor: card.backgroundColor || '#ffffff',
-              backgroundImage: card.backgroundUrl ? `url(${card.backgroundUrl})` : undefined,
+              backgroundColor: currentSlide.backgroundColor || card.backgroundColor || '#ffffff',
+              backgroundImage: currentSlide.backgroundUrl ? `url(${currentSlide.backgroundUrl})` : (card.backgroundUrl ? `url(${card.backgroundUrl})` : undefined),
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }}
           >
             {/* Overlay */}
-            {card.backgroundUrl && <div className="absolute inset-0 bg-black/20" />}
+            {(currentSlide.backgroundUrl || card.backgroundUrl) && <div className="absolute inset-0 bg-black/20" />}
             
             <div className="absolute inset-0 p-8 flex flex-col justify-center items-center h-full z-10">
               {card.videoUrl && (
@@ -162,19 +174,19 @@ export default function ViewCardPage() {
               )}
 
               <p 
-                className={`${card.fontFamily} leading-relaxed break-words w-full transition-opacity duration-300`}
+                className={`${currentSlide.fontFamily || card.fontFamily} leading-relaxed break-words w-full transition-opacity duration-300`}
                 style={{ 
-                  color: card.textColor,
-                  fontSize: `${fontSize}px`,
-                  textAlign: textAlign,
-                  textShadow: card.backgroundUrl ? '0 2px 4px rgba(0,0,0,0.5)' : 'none'
+                  color: currentSlide.textColor || card.textColor,
+                  fontSize: `${currentSlide.fontSize || fontSize}px`,
+                  textAlign: currentSlide.textAlign || textAlign,
+                  textShadow: (currentSlide.backgroundUrl || card.backgroundUrl) ? '0 2px 4px rgba(0,0,0,0.5)' : 'none'
                 }}
               >
                 {currentSlide.content}
               </p>
               <p 
                 className="mt-8 text-sm font-medium opacity-90"
-                style={{ color: card.textColor }}
+                style={{ color: currentSlide.textColor || card.textColor }}
               >
                 — {card.author}
               </p>
@@ -186,7 +198,31 @@ export default function ViewCardPage() {
             </div>
           </div>
 
-          {/* Slide Navigation */}
+          {/* Navigation Buttons */}
+          {slides.length > 1 && (
+            <>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-0 z-20"
+                onClick={prevSlide}
+                disabled={currentSlideIndex === 0}
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-0 z-20"
+                onClick={nextSlide}
+                disabled={currentSlideIndex === slides.length - 1}
+              >
+                <ChevronRight className="w-6 h-6" />
+              </Button>
+            </>
+          )}
+
+          {/* Slide Navigation Dots */}
           {slides.length > 1 && (
             <div className="flex justify-center gap-2 mt-4">
               {slides.map((_: any, idx: number) => (

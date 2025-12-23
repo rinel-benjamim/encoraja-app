@@ -33,4 +33,8 @@ next-env.d.ts
 *.sqlite
 *.sqlite-journal
 migrations/
+/prisma/dev.db
+
+#upload files
+/public/uploads
 

@@ -51,12 +51,18 @@ model Card {
 }
 
 model CardSlide {
-  id        String   @id @default(cuid())
-  cardId    String
-  content   String
-  mediaUrl  String?
-  mediaType String? // "image" | "video"
-  order     Int
+  id              String   @id @default(cuid())
+  cardId          String
+  content         String
+  mediaUrl        String?
+  mediaType       String? // "image" | "video"
+  backgroundUrl   String?
+  backgroundColor String?
+  fontFamily      String?
+  textColor       String?
+  fontSize        Int?
+  textAlign       String?
+  order           Int
   
   card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
 }

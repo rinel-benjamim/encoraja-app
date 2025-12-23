@@ -6,7 +6,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { useSession } from "next-auth/react"
 import { createCard } from "@/lib/card-service"
-import { uploadImage } from "@/lib/storage-service"
+import { uploadFile } from "@/lib/storage-service"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -32,7 +32,10 @@ import {
   Video,
   Calendar,
   Sparkles,
-  QrCode
+  QrCode,
+  ChevronLeft,
+  ChevronRight,
+  X
 } from "lucide-react"
 import { FONT_OPTIONS, COLOR_OPTIONS } from "@/types/card"
 
@@ -55,7 +58,7 @@ const SUGGESTED_MESSAGES = [
   "Você é capaz de coisas incríveis.",
 ]
 
-const AI_CATEGORIES = ["Motivação", "Aniversário", "Amor", "Gratidão", "Superação"]
+const AI_CATEGORIES = ["Motivação", "Teocrático", "Amor", "Gratidão", "Superação"]
 
 export default function CreateCardPage() {
   const router = useRouter()
@@ -69,15 +72,19 @@ export default function CreateCardPage() {
   const [uploading, setUploading] = useState(false)
   
   // Card State
-  const [slides, setSlides] = useState([{ content: "Sua mensagem aqui...", mediaUrl: "", mediaType: "image" }])
+  const [slides, setSlides] = useState([{ 
+    content: "Sua mensagem aqui...", 
+    mediaUrl: "", 
+    mediaType: "image",
+    backgroundUrl: BACKGROUND_IMAGES[0],
+    backgroundColor: "#ffffff",
+    fontFamily: "font-serif",
+    textColor: "#ffffff",
+    fontSize: 24,
+    textAlign: "center" as "left" | "center" | "right"
+  }])
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
   const [author, setAuthor] = useState("")
-  const [backgroundUrl, setBackgroundUrl] = useState<string | undefined>(BACKGROUND_IMAGES[0])
-  const [backgroundColor, setBackgroundColor] = useState("#ffffff")
-  const [fontFamily, setFontFamily] = useState("font-serif")
-  const [textColor, setTextColor] = useState("#ffffff")
-  const [fontSize, setFontSize] = useState(24)
-  const [textAlign, setTextAlign] = useState<"left" | "center" | "right">("center")
   
   // New Features State
   const [audioUrl, setAudioUrl] = useState<string | undefined>()
@@ -100,8 +107,8 @@ export default function CreateCardPage() {
       const formData = new FormData()
       formData.append("file", file)
       
-      const url = await uploadImage(formData)
-      setBackgroundUrl(url)
+      const url = await uploadFile(formData)
+      updateSlideState('backgroundUrl', url)
       toast({
         title: "Imagem enviada!",
         description: "Sua imagem foi carregada com sucesso.",
@@ -126,7 +133,7 @@ export default function CreateCardPage() {
       const formData = new FormData()
       formData.append("file", file)
       
-      const url = await uploadImage(formData)
+      const url = await uploadFile(formData)
       if (type === 'audio') setAudioUrl(url)
       else setVideoUrl(url)
       
@@ -146,7 +153,17 @@ export default function CreateCardPage() {
   }
 
   const addSlide = () => {
-    setSlides([...slides, { content: "Nova mensagem...", mediaUrl: "", mediaType: "image" }])
+    setSlides([...slides, { 
+      content: "Nova mensagem...", 
+      mediaUrl: "", 
+      mediaType: "image",
+      backgroundUrl: BACKGROUND_IMAGES[0],
+      backgroundColor: "#ffffff",
+      fontFamily: "font-serif",
+      textColor: "#ffffff",
+      fontSize: 24,
+      textAlign: "center"
+    }])
     setCurrentSlideIndex(slides.length)
   }
 
@@ -157,22 +174,68 @@ export default function CreateCardPage() {
     setCurrentSlideIndex(Math.min(currentSlideIndex, newSlides.length - 1))
   }
 
-  const updateSlideContent = (content: string) => {
+  const updateSlideState = (key: string, value: any) => {
     const newSlides = [...slides]
-    newSlides[currentSlideIndex].content = content
+    newSlides[currentSlideIndex] = {
+      ...newSlides[currentSlideIndex],
+      [key]: value
+    }
     setSlides(newSlides)
   }
 
   const generateAIMessage = (category: string) => {
-    // Mock AI generation
-    const messages = [
-      `Para ${category}: Acredite que cada dia traz uma nova oportunidade de vencer.`,
-      `Em momentos de ${category}, lembre-se da sua força interior.`,
-      `Que a ${category} encha seu coração de paz e alegria.`,
-      `Você é um exemplo de ${category} para todos nós.`
-    ]
+    let messages: string[] = []
+    
+    if (category === "Teocrático") {
+      messages = [
+        "Salmo 37:25: Fui jovem e agora sou velho, Mas nunca vi um justo abandonado Nem os seus filhos à procura de pão.",
+        "Provérbios 10:3: Jeová não fará o justo passar fome, Mas negará aos maus o que eles cobiçam.",
+        "Salmo 25:15, 16: Os meus olhos estão sempre voltados para Jeová, Pois ele libertará os meus pés da rede. Volta a tua face para mim e mostra-me favor, Pois estou sozinho e desamparado.",
+        "Isaías 30:15: Pois assim diz o Soberano Senhor Jeová, o Santo de Israel: “Se voltarem para mim e ficarem tranquilos, serão salvos; A vossa força estará em permanecerem calmos e terem confiança.”",
+        "Filipenses 4:13: Para todas as coisas tenho forças graças àquele que me dá poder.",
+        "Jeremias 29:11: 'Pois eu sei muito bem o que tenho em mente para vocês', diz Jeová. 'Quero que tenham paz, não calamidade. Quero dar-lhes um futuro e uma esperança.'",
+        "Salmo 55:22: Lança o teu fardo sobre Jeová, E ele amparar-te-á. Nunca permitirá que o justo caia.",
+        "Isaías 41:10: Não tenhas medo, pois estou contigo. Não fiques ansioso, pois eu sou o teu Deus. Vou fortalecer-te, sim, vou ajudar-te. Vou segurar-te firmemente com a minha mão direita de justiça."
+      ]
+    } else {
+      messages = [
+        `Para ${category}: Acredite que cada dia traz uma nova oportunidade de vencer.`,
+        `Em momentos de ${category}, lembre-se da sua força interior.`,
+        `Que a ${category} encha seu coração de paz e alegria.`,
+        `Você é um exemplo de ${category} para todos nós.`
+      ]
+    }
+    
     const randomMsg = messages[Math.floor(Math.random() * messages.length)]
-    updateSlideContent(randomMsg)
+    updateSlideState('content', randomMsg)
+  }
+
+  const resetCard = () => {
+    if (confirm("Tem certeza que deseja limpar tudo?")) {
+      setSlides([{ 
+        content: "Sua mensagem aqui...", 
+        mediaUrl: "", 
+        mediaType: "image",
+        backgroundUrl: BACKGROUND_IMAGES[0],
+        backgroundColor: "#ffffff",
+        fontFamily: "font-serif",
+        textColor: "#ffffff",
+        fontSize: 24,
+        textAlign: "center"
+      }])
+      setCurrentSlideIndex(0)
+      setAudioUrl(undefined)
+      setVideoUrl(undefined)
+      setRevealAt("")
+    }
+  }
+
+  const prevSlide = () => {
+    setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))
+  }
+
+  const nextSlide = () => {
+    setCurrentSlideIndex(Math.min(slides.length - 1, currentSlideIndex + 1))
   }
 
   const handleSave = async () => {
@@ -195,13 +258,13 @@ export default function CreateCardPage() {
         author,
         message: slides[0].content, // Fallback
         slides,
-        backgroundUrl,
-        backgroundColor,
-        fontFamily,
-        textColor,
+        backgroundUrl: slides[0].backgroundUrl, // Fallback
+        backgroundColor: slides[0].backgroundColor, // Fallback
+        fontFamily: slides[0].fontFamily, // Fallback
+        textColor: slides[0].textColor, // Fallback
         isPublic: true,
-        fontSize,
-        textAlign,
+        fontSize: slides[0].fontSize, // Fallback
+        textAlign: slides[0].textAlign, // Fallback
         audioUrl,
         videoUrl,
         revealAt: revealAt || null,
@@ -225,6 +288,8 @@ export default function CreateCardPage() {
     }
   }
 
+  const currentSlide = slides[currentSlideIndex]
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -238,10 +303,15 @@ export default function CreateCardPage() {
             </Link>
             <h1 className="font-serif text-xl font-bold text-foreground">Criar Cartão</h1>
           </div>
-          <Button onClick={handleSave} disabled={loading || uploading} className="bg-primary text-primary-foreground">
-            {loading ? <Spinner className="mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}
-            Salvar e Compartilhar
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="destructive" size="icon" onClick={resetCard} title="Limpar Cartão">
+              <Trash2 className="w-4 h-4" />
+            </Button>
+            <Button onClick={handleSave} disabled={loading || uploading} className="bg-primary text-primary-foreground">
+              {loading ? <Spinner className="mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}
+              Salvar
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -251,14 +321,14 @@ export default function CreateCardPage() {
           <div 
             className="relative w-full max-w-md aspect-[4/5] shadow-2xl rounded-xl overflow-hidden transition-all duration-300"
             style={{
-              backgroundColor: backgroundColor,
-              backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : undefined,
+              backgroundColor: currentSlide.backgroundColor,
+              backgroundImage: currentSlide.backgroundUrl ? `url(${currentSlide.backgroundUrl})` : undefined,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }}
           >
             {/* Overlay para legibilidade se tiver imagem */}
-            {backgroundUrl && <div className="absolute inset-0 bg-black/20" />}
+            {currentSlide.backgroundUrl && <div className="absolute inset-0 bg-black/20" />}
             
             <div className="absolute inset-0 p-8 flex flex-col justify-center items-center h-full z-10">
               {videoUrl && (
@@ -268,19 +338,19 @@ export default function CreateCardPage() {
               )}
               
               <p 
-                className={`${fontFamily} leading-relaxed break-words w-full`}
+                className={`${currentSlide.fontFamily} leading-relaxed break-words w-full`}
                 style={{ 
-                  color: textColor,
-                  fontSize: `${fontSize}px`,
-                  textAlign: textAlign,
-                  textShadow: backgroundUrl ? '0 2px 4px rgba(0,0,0,0.5)' : 'none'
+                  color: currentSlide.textColor,
+                  fontSize: `${currentSlide.fontSize}px`,
+                  textAlign: currentSlide.textAlign,
+                  textShadow: currentSlide.backgroundUrl ? '0 2px 4px rgba(0,0,0,0.5)' : 'none'
                 }}
               >
-                {slides[currentSlideIndex].content}
+                {currentSlide.content}
               </p>
               <p 
                 className="mt-6 text-sm font-medium opacity-80"
-                style={{ color: textColor }}
+                style={{ color: currentSlide.textColor }}
               >
                 — {author}
               </p>
@@ -293,16 +363,26 @@ export default function CreateCardPage() {
           </div>
 
           {/* Slide Navigation */}
-          <div className="flex items-center gap-2 mt-6">
-            {slides.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setCurrentSlideIndex(idx)}
-                className={`w-3 h-3 rounded-full transition-all ${idx === currentSlideIndex ? 'bg-primary scale-125' : 'bg-muted-foreground/30'}`}
-              />
-            ))}
-            <Button variant="outline" size="icon" className="rounded-full w-8 h-8 ml-2" onClick={addSlide}>
-              <Plus className="w-4 h-4" />
+          <div className="flex items-center gap-4 mt-6">
+            <Button variant="outline" size="icon" onClick={prevSlide} disabled={currentSlideIndex === 0} className="rounded-full">
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            
+            <div className="flex items-center gap-2">
+              {slides.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentSlideIndex(idx)}
+                  className={`w-3 h-3 rounded-full transition-all ${idx === currentSlideIndex ? 'bg-primary scale-125' : 'bg-muted-foreground/30'}`}
+                />
+              ))}
+              <Button variant="outline" size="icon" className="rounded-full w-8 h-8 ml-2" onClick={addSlide}>
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <Button variant="outline" size="icon" onClick={nextSlide} disabled={currentSlideIndex === slides.length - 1} className="rounded-full">
+              <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -310,11 +390,11 @@ export default function CreateCardPage() {
         {/* Controls Area */}
         <div className="space-y-6 overflow-y-auto max-h-[calc(100vh-100px)] pr-2">
           <Tabs defaultValue="message" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 mb-4">
+            <TabsList className="grid w-full grid-cols-4 mb-4">
               <TabsTrigger value="message"><Type className="w-4 h-4" /></TabsTrigger>
               <TabsTrigger value="background"><ImageIcon className="w-4 h-4" /></TabsTrigger>
               <TabsTrigger value="style"><Palette className="w-4 h-4" /></TabsTrigger>
-              <TabsTrigger value="media"><Music className="w-4 h-4" /></TabsTrigger>
+              {/* <TabsTrigger value="media"><Music className="w-4 h-4" /></TabsTrigger> */}
               <TabsTrigger value="extras"><Sparkles className="w-4 h-4" /></TabsTrigger>
             </TabsList>
 
@@ -331,17 +411,17 @@ export default function CreateCardPage() {
               <div className="space-y-2">
                 <Label>Sua Mensagem</Label>
                 <Textarea 
-                  value={slides[currentSlideIndex].content}
-                  onChange={(e) => updateSlideContent(e.target.value)}
+                  value={currentSlide.content}
+                  onChange={(e) => updateSlideState('content', e.target.value)}
                   placeholder="Escreva algo encorajador..."
                   className="min-h-[120px] text-lg"
                   maxLength={300}
                 />
-                <p className="text-xs text-muted-foreground text-right">{slides[currentSlideIndex].content.length}/300</p>
+                <p className="text-xs text-muted-foreground text-right">{currentSlide.content.length}/300</p>
               </div>
 
               <div className="space-y-2">
-                <Label>Gerar com IA (Simulado)</Label>
+                <Label>Aleatório</Label>
                 <div className="flex flex-wrap gap-2">
                   {AI_CATEGORIES.map(cat => (
                     <Button key={cat} variant="outline" size="sm" onClick={() => generateAIMessage(cat)}>
@@ -368,8 +448,8 @@ export default function CreateCardPage() {
                   {BACKGROUND_IMAGES.map((url, i) => (
                     <button
                       key={i}
-                      onClick={() => setBackgroundUrl(url)}
-                      className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${backgroundUrl === url ? 'border-primary ring-2 ring-primary/30' : 'border-transparent hover:border-primary/50'}`}
+                      onClick={() => updateSlideState('backgroundUrl', url)}
+                      className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${currentSlide.backgroundUrl === url ? 'border-primary ring-2 ring-primary/30' : 'border-transparent hover:border-primary/50'}`}
                     >
                       <Image 
                         src={url} 
@@ -381,8 +461,8 @@ export default function CreateCardPage() {
                     </button>
                   ))}
                   <button
-                    onClick={() => setBackgroundUrl(undefined)}
-                    className={`relative aspect-square rounded-lg overflow-hidden border-2 flex items-center justify-center bg-muted transition-all ${!backgroundUrl ? 'border-primary ring-2 ring-primary/30' : 'border-transparent hover:border-primary/50'}`}
+                    onClick={() => updateSlideState('backgroundUrl', undefined)}
+                    className={`relative aspect-square rounded-lg overflow-hidden border-2 flex items-center justify-center bg-muted transition-all ${!currentSlide.backgroundUrl ? 'border-primary ring-2 ring-primary/30' : 'border-transparent hover:border-primary/50'}`}
                   >
                     <span className="text-xs text-muted-foreground">Sem Imagem</span>
                   </button>
@@ -409,7 +489,7 @@ export default function CreateCardPage() {
                     onChange={handleImageUpload}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">Máximo 5MB. JPG ou PNG.</p>
+                <p className="text-xs text-muted-foreground">Sem limite de tamanho. Imagens, Áudio ou Vídeo.</p>
               </div>
 
               <div className="space-y-2">
@@ -419,20 +499,20 @@ export default function CreateCardPage() {
                     <button
                       key={color.value}
                       onClick={() => {
-                        setBackgroundColor(color.value)
-                        setBackgroundUrl(undefined)
+                        updateSlideState('backgroundColor', color.value)
+                        updateSlideState('backgroundUrl', undefined)
                       }}
-                      className={`w-8 h-8 rounded-full border border-border transition-transform hover:scale-110 ${backgroundColor === color.value && !backgroundUrl ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                      className={`w-8 h-8 rounded-full border border-border transition-transform hover:scale-110 ${currentSlide.backgroundColor === color.value && !currentSlide.backgroundUrl ? 'ring-2 ring-primary ring-offset-2' : ''}`}
                       style={{ backgroundColor: color.value }}
                       title={color.label}
                     />
                   ))}
                   <input 
                     type="color" 
-                    value={backgroundColor}
+                    value={currentSlide.backgroundColor}
                     onChange={(e) => {
-                      setBackgroundColor(e.target.value)
-                      setBackgroundUrl(undefined)
+                      updateSlideState('backgroundColor', e.target.value)
+                      updateSlideState('backgroundUrl', undefined)
                     }}
                     className="w-8 h-8 p-0 border-0 rounded-full overflow-hidden cursor-pointer"
                   />
@@ -443,7 +523,7 @@ export default function CreateCardPage() {
             <TabsContent value="style" className="space-y-6">
               <div className="space-y-2">
                 <Label>Fonte</Label>
-                <Select value={fontFamily} onValueChange={setFontFamily}>
+                <Select value={currentSlide.fontFamily} onValueChange={(val) => updateSlideState('fontFamily', val)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -463,29 +543,29 @@ export default function CreateCardPage() {
                   {COLOR_OPTIONS.map((color) => (
                     <button
                       key={color.value}
-                      onClick={() => setTextColor(color.value)}
-                      className={`w-8 h-8 rounded-full border border-border transition-transform hover:scale-110 ${textColor === color.value ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                      onClick={() => updateSlideState('textColor', color.value)}
+                      className={`w-8 h-8 rounded-full border border-border transition-transform hover:scale-110 ${currentSlide.textColor === color.value ? 'ring-2 ring-primary ring-offset-2' : ''}`}
                       style={{ backgroundColor: color.value }}
                       title={color.label}
                     />
                   ))}
                   <input 
                     type="color" 
-                    value={textColor}
-                    onChange={(e) => setTextColor(e.target.value)}
+                    value={currentSlide.textColor}
+                    onChange={(e) => updateSlideState('textColor', e.target.value)}
                     className="w-8 h-8 p-0 border-0 rounded-full overflow-hidden cursor-pointer"
                   />
                 </div>
               </div>
               
               <div className="space-y-2">
-                <Label>Tamanho da Fonte: {fontSize}px</Label>
+                <Label>Tamanho da Fonte: {currentSlide.fontSize}px</Label>
                 <Slider 
-                  value={[fontSize]} 
+                  value={[currentSlide.fontSize]} 
                   min={12} 
                   max={48} 
                   step={1} 
-                  onValueChange={(vals) => setFontSize(vals[0])} 
+                  onValueChange={(vals) => updateSlideState('fontSize', vals[0])} 
                 />
               </div>
 
@@ -493,25 +573,25 @@ export default function CreateCardPage() {
                 <Label>Alinhamento</Label>
                 <div className="flex gap-2">
                   <Button 
-                    variant={textAlign === "left" ? "default" : "outline"} 
+                    variant={currentSlide.textAlign === "left" ? "default" : "outline"} 
                     size="sm" 
-                    onClick={() => setTextAlign("left")}
+                    onClick={() => updateSlideState('textAlign', "left")}
                     className="flex-1"
                   >
                     Esquerda
                   </Button>
                   <Button 
-                    variant={textAlign === "center" ? "default" : "outline"} 
+                    variant={currentSlide.textAlign === "center" ? "default" : "outline"} 
                     size="sm" 
-                    onClick={() => setTextAlign("center")}
+                    onClick={() => updateSlideState('textAlign', "center")}
                     className="flex-1"
                   >
                     Centro
                   </Button>
                   <Button 
-                    variant={textAlign === "right" ? "default" : "outline"} 
+                    variant={currentSlide.textAlign === "right" ? "default" : "outline"} 
                     size="sm" 
-                    onClick={() => setTextAlign("right")}
+                    onClick={() => updateSlideState('textAlign', "right")}
                     className="flex-1"
                   >
                     Direita
@@ -520,7 +600,7 @@ export default function CreateCardPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="media" className="space-y-6">
+            {/* <TabsContent value="media" className="space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Música de Fundo</Label>
@@ -534,6 +614,11 @@ export default function CreateCardPage() {
                       {uploading ? <Spinner className="mr-2 h-4 w-4" /> : <Music className="mr-2 h-4 w-4" />}
                       {audioUrl ? "Alterar Música" : "Adicionar Música"}
                     </Button>
+                    {audioUrl && (
+                      <Button variant="destructive" size="icon" onClick={() => setAudioUrl(undefined)}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
                     <input 
                       type="file" 
                       ref={audioInputRef}
@@ -557,6 +642,11 @@ export default function CreateCardPage() {
                       {uploading ? <Spinner className="mr-2 h-4 w-4" /> : <Video className="mr-2 h-4 w-4" />}
                       {videoUrl ? "Alterar Vídeo" : "Adicionar Vídeo"}
                     </Button>
+                    {videoUrl && (
+                      <Button variant="destructive" size="icon" onClick={() => setVideoUrl(undefined)}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
                     <input 
                       type="file" 
                       ref={videoInputRef}
@@ -567,10 +657,10 @@ export default function CreateCardPage() {
                   </div>
                 </div>
               </div>
-            </TabsContent>
+            </TabsContent> */}
 
             <TabsContent value="extras" className="space-y-6">
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label>Agendar Revelação</Label>
                 <div className="flex gap-2 items-center">
                   <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -581,7 +671,7 @@ export default function CreateCardPage() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">O cartão só poderá ser visto após esta data.</p>
-              </div>
+              </div> */}
 
               <div className="space-y-2">
                 <Label>QR Code</Label>

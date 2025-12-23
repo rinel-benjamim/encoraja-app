@@ -4,21 +4,22 @@ import { writeFile, mkdir } from "fs/promises"
 import { join } from "path"
 import { v4 as uuidv4 } from "uuid"
 
-export async function uploadImage(formData: FormData): Promise<string> {
+export async function uploadFile(formData: FormData): Promise<string> {
   try {
     const file = formData.get("file") as File
     if (!file) {
       throw new Error("Nenhum arquivo enviado")
     }
 
-    // Validar tamanho (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      throw new Error("A imagem deve ter no máximo 5MB.")
-    }
+    // Validar tamanho (Removido limite de 10MB conforme solicitado)
+    // if (file.size > 10 * 1024 * 1024) {
+    //   throw new Error("O arquivo deve ter no máximo 10MB.")
+    // }
 
     // Validar tipo
-    if (!file.type.startsWith("image/")) {
-      throw new Error("O arquivo deve ser uma imagem.")
+    const allowedTypes = ["image/", "video/", "audio/"]
+    if (!allowedTypes.some(type => file.type.startsWith(type))) {
+      throw new Error("Tipo de arquivo não suportado. Use imagens, vídeos ou áudio.")
     }
 
     const bytes = await file.arrayBuffer()
@@ -40,7 +41,9 @@ export async function uploadImage(formData: FormData): Promise<string> {
 
     return `/uploads/${fileName}`
   } catch (error) {
-    console.error("Erro ao fazer upload da imagem:", error)
-    throw new Error("Falha no upload da imagem")
+    console.error("Erro ao fazer upload do arquivo:", error)
+    throw new Error("Falha no upload do arquivo")
   }
 }
+
+export const uploadImage = uploadFile // Alias for backward compatibility

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import type { Card } from "@/types/card"
 
 export async function createCard(cardData: any) {
+  console.log("Creating card with data:", JSON.stringify(cardData, null, 2))
   try {
     const card = await prisma.card.create({
       data: {
@@ -22,7 +23,7 @@ export async function createCard(cardData: any) {
         // New Features
         audioUrl: cardData.audioUrl,
         videoUrl: cardData.videoUrl,
-        revealAt: cardData.revealAt ? new Date(cardData.revealAt) : null,
+        revealAt: cardData.revealAt && cardData.revealAt !== "" ? new Date(cardData.revealAt) : null,
         themeId: cardData.themeId,
         
         // Slides
@@ -31,6 +32,12 @@ export async function createCard(cardData: any) {
             content: slide.content,
             mediaUrl: slide.mediaUrl,
             mediaType: slide.mediaType,
+            backgroundUrl: slide.backgroundUrl,
+            backgroundColor: slide.backgroundColor,
+            fontFamily: slide.fontFamily,
+            textColor: slide.textColor,
+            fontSize: slide.fontSize,
+            textAlign: slide.textAlign,
             order: index,
           })) || []
         }
@@ -41,6 +48,10 @@ export async function createCard(cardData: any) {
     return card.id
   } catch (error) {
     console.error("Erro ao criar cartão:", error)
+    if (error instanceof Error) {
+      console.error("Error message:", error.message)
+      console.error("Error stack:", error.stack)
+    }
     throw new Error("Falha ao criar cartão")
   }
 }
